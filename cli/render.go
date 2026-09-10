@@ -14,6 +14,7 @@ import (
 	knov1 "github.com/knograph/kno/gen/kno/v1"
 	"github.com/knograph/kno/goal"
 	"github.com/knograph/kno/goal/exactmatch"
+	"github.com/knograph/kno/goal/tokenf1"
 	"github.com/knograph/kno/stats/budget"
 )
 
@@ -39,6 +40,9 @@ const confirmThresholdUSD = 1.00
 func goalRegistry() *goal.Registry {
 	r := goal.NewRegistry()
 	if err := r.Register("exact-match", &exactmatch.Goal{}); err != nil {
+		panic(fmt.Sprintf("cli: wiring the goal registry: %v", err))
+	}
+	if err := r.Register("token-f1", &tokenf1.Goal{}); err != nil {
 		panic(fmt.Sprintf("cli: wiring the goal registry: %v", err))
 	}
 	return r

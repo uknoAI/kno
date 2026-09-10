@@ -115,7 +115,8 @@
     }
   ],
   "goals": [
-    "exact-match"
+    "exact-match",
+    "token-f1"
   ],
   "price_table": "2026-08-28",
   "debt": {

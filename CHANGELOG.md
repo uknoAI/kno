@@ -28,6 +28,20 @@ covenants — breaking any of them requires a major version.
      At release time the hand-written heading is renamed from [Unreleased] to
      the version. See docs/debt.md#76 for why that is still a manual step. -->
 
+## [Unreleased]
+
+### Features
+
+* **goal:** add `token-f1`, a self-contained graded Goal (`SCORE_DOMAIN_UNIT_INTERVAL`) scoring
+  token-level F1 against a Case's expected answer, registered on `goal/registry.go`'s
+  self-contained allowlist alongside `exact-match`. Built to test whether `exact-match`'s binary
+  Domain — every per-Case score exactly 0 or 1 — was suppressing partial-effect measurements a
+  graded Goal could express; see `docs/plans/2026-09-10-graded-goal-token-f1.md` for the design
+  and the pilot re-score it produced. `docs/debt.md#152`'s trigger ("when the first
+  `SCORE_DOMAIN_UNIT_INTERVAL` Goal is registered") fires literally on this change; the entry is
+  carried and its trigger narrowed to a judged Goal, with reasoning recorded in the ledger and the
+  plan, rather than treated as repaid.
+
 ## [0.2.2](https://github.com/uknoAI/kno/compare/v0.2.1...v0.2.2) (2026-09-10)
 
 

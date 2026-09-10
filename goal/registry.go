@@ -59,6 +59,7 @@ import (
 // core.Goal.Score runs outside the budget reservation.
 var selfContained = map[string]struct{}{
 	"exact-match": {},
+	"token-f1":    {},
 }
 
 // SelfContained returns the allowlisted Goal names, sorted.

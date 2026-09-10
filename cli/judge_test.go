@@ -228,7 +228,7 @@ func TestDoctorReportsTheRegistrysGoals(t *testing.T) {
 		t.Fatal(err)
 	}
 	goals, ok := raw["goals"].([]any)
-	if !ok || len(goals) != 1 || goals[0] != "exact-match" {
+	if !ok || len(goals) != 2 || goals[0] != "exact-match" || goals[1] != "token-f1" {
 		t.Errorf("doctor reports goals %v", raw["goals"])
 	}
 }

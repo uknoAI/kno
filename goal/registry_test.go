@@ -11,6 +11,7 @@ import (
 	knov1 "github.com/knograph/kno/gen/kno/v1"
 	"github.com/knograph/kno/goal"
 	"github.com/knograph/kno/goal/exactmatch"
+	"github.com/knograph/kno/goal/tokenf1"
 )
 
 // stubProvider stands in for an LLM endpoint. Calling it fails the test, so a
@@ -178,7 +179,27 @@ func TestSelfContainedIsNotEditableThroughItsAccessor(t *testing.T) {
 	if err := r.Register("mystery-judge", &exactmatch.Goal{}); err == nil {
 		t.Error("mutating the returned slice changed the allowlist")
 	}
-	if names := goal.SelfContained(); len(names) != 1 || names[0] != "exact-match" {
+	if names := goal.SelfContained(); len(names) != 2 ||
+		names[0] != "exact-match" || names[1] != "token-f1" {
 		t.Errorf("the allowlist drifted: %v", names)
+	}
+}
+
+// TestTokenF1IsAllowlisted is the token-f1 analogue of
+// TestAllowlistedGoalRegisters: a second self-contained Goal must register
+// exactly as cleanly as the first one did, on its own declared Domain.
+func TestTokenF1IsAllowlisted(t *testing.T) {
+	t.Parallel()
+
+	r := goal.NewRegistry()
+	if err := r.Register("token-f1", &tokenf1.Goal{}); err != nil {
+		t.Fatalf("token-f1 is on the allowlist and did not register: %v", err)
+	}
+	g, err := r.Resolve("token-f1")
+	if err != nil {
+		t.Fatalf("resolving a registered Goal: %v", err)
+	}
+	if g.Domain() != knov1.ScoreDomain_SCORE_DOMAIN_UNIT_INTERVAL {
+		t.Errorf("resolved the wrong Goal: domain %v", g.Domain())
 	}
 }
