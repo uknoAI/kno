@@ -170,6 +170,8 @@ covenants — breaking any of them requires a major version.
 
 ## [Unreleased]
 
+## v0.2.2 — in detail
+
 ### Fixed
 
 - **A changelog fold could file entries under a release that predates them, and
