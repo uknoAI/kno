@@ -28,6 +28,23 @@ covenants — breaking any of them requires a major version.
      At release time the hand-written heading is renamed from [Unreleased] to
      the version. See docs/debt.md#76 for why that is still a manual step. -->
 
+## [0.2.2](https://github.com/uknoAI/kno/compare/v0.2.1...v0.2.2) (2026-09-10)
+
+
+### Bug Fixes
+
+* **build:** check the changelog fold at merge, not only at creation ([#216](https://github.com/uknoAI/kno/issues/216)) ([1a842f5](https://github.com/uknoAI/kno/commit/1a842f5066281af1050d6420cea0915a4df709cb))
+
+
+### Documentation
+
+* fold the hand-written changelog into v0.2.1 ([#214](https://github.com/uknoAI/kno/issues/214)) ([d3df2a9](https://github.com/uknoAI/kno/commit/d3df2a9d6c405af93a7db602bd1672d0e2cda461))
+
+
+### Build & Dependencies
+
+* **deps:** Bump modernc.org/sqlite from 1.57.0 to 1.58.0 ([#217](https://github.com/uknoAI/kno/issues/217)) ([2d6c0ba](https://github.com/uknoAI/kno/commit/2d6c0ba06b5aece5f22d593706743ac705edc59b))
+
 ## [0.2.1](https://github.com/uknoAI/kno/compare/v0.2.0...v0.2.1) (2026-09-04)
 
 
