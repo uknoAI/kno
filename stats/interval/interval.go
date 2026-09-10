@@ -174,10 +174,29 @@ func compute(
 	// degenerate when every pair agrees. With repeated trials the difference
 	// takes trials+1 values and is no longer a discordance count at all, so it
 	// takes the continuous path.
+	var iv *knov1.Interval
 	if domain == knov1.ScoreDomain_SCORE_DOMAIN_BINARY && trials <= 1 {
-		return adjustedWald(deltas, level, side)
+		iv = adjustedWald(deltas, level, side)
+	} else {
+		iv = paired(deltas, level, side)
 	}
-	return paired(deltas, level, side)
+	// The clamp belongs HERE and not inside a method, because the range is a
+	// property of the DOMAIN and every method has to respect it.
+	//
+	// It was first written inside adjustedWald, where a Wald-type interval
+	// visibly ran past 1.0 on a binary score. That fixed one branch and left
+	// the rest: a UNIT_INTERVAL Goal never reaches adjustedWald — the dispatch
+	// above gates it on BINARY — so its Student-t and sign intervals stayed
+	// unclamped, and a real run reported a delta of +1.187 on a score whose
+	// maximum is 1.0. Same defect, different branch, invisible to the test
+	// written for the first one because that test only exercised BINARY.
+	//
+	// At the dispatch, a method added later is covered without anyone
+	// remembering to cover it.
+	if boundedDomain(domain) {
+		return clampToUnit(iv)
+	}
+	return iv
 }
 
 // adjustedWald is the score-based interval on a paired difference of
@@ -219,43 +238,25 @@ func adjustedWald(deltas []float64, level float64, side knov1.Sidedness) *knov1.
 	variance := (bb + cc - (bb-cc)*(bb-cc)/nn) / (nn * nn)
 	half := zFor(level, side) * math.Sqrt(math.Max(variance, 0))
 
-	iv := build(center, half, level, side, MethodAdjustedWald, len(deltas))
+	return build(center, half, level, side, MethodAdjustedWald, len(deltas))
+}
 
-	// Clamped to the estimand's own range, because a Wald-type interval does
-	// not respect it.
-	//
-	// A paired difference of BINARY scores can only lie in [-1, +1]: every
-	// pair contributes -1, 0 or +1, so their mean cannot leave that range.
-	// This interval is Wald-TYPE — a normal approximation around an adjusted
-	// point estimate — and normal approximations run off the end of a bounded
-	// parameter space at extreme observed rates. That is the textbook failure
-	// that retired the naive Wald interval for a single proportion; this is
-	// its paired analogue, and the adjustment (Agresti–Caffo's +1 per cell)
-	// fixes coverage without fixing range.
-	//
-	// Measured, not assumed: with every pair improving, the upper bound
-	// exceeded 1.0 at n=5, 6, 10, 20 AND 50 — 1.2327 at n=5 and still 1.0362
-	// at n=50. It is systematic for an extreme rate, not a small-sample
-	// curiosity.
-	//
-	// Nothing downstream caught it. build() refuses NaN, Inf and a
-	// non-positive half-width but knows no domain; portfolio.Correct widens
-	// the half multiplicatively for Bonferroni and pushes an out-of-range
-	// bound further out; select's rules only ask whether an interval crosses
-	// zero. So the DECISION was unaffected and the reported NUMBER was
-	// impossible — a delta of +1.23 on a metric whose maximum is 1.0. Prime
-	// directive 5 is about intervals a reader can trust; one that asserts a
-	// value the estimand cannot take spends that trust everywhere else.
-	//
-	// Clamping narrows the interval, which for a bound that already sat
-	// outside the parameter space cannot lose real coverage: no true value
-	// lived in the discarded part.
-	return clampToUnit(iv)
+// boundedDomain reports whether a Goal's scores are confined to a range, which
+// makes their paired difference confined too.
+//
+// BINARY scores are 0 or 1 and UNIT_INTERVAL scores are [0,1], so in both cases
+// every pair contributes a difference in [-1, +1] and so does their mean.
+// CONTINUOUS_UNBOUNDED promises nothing, and UNSPECIFIED is not a claim, so
+// neither is clamped — narrowing an interval whose estimand really can exceed
+// the range would discard coverage that exists.
+func boundedDomain(d knov1.ScoreDomain) bool {
+	return d == knov1.ScoreDomain_SCORE_DOMAIN_BINARY ||
+		d == knov1.ScoreDomain_SCORE_DOMAIN_UNIT_INTERVAL
 }
 
 // clampToUnit confines an interval to [-1, +1], the range of a mean of paired
-// binary differences. A nil interval passes through — the caller's refusal is
-// not ours to override.
+// differences over a bounded score. A nil interval passes through — the
+// caller's refusal is not ours to override.
 func clampToUnit(iv *knov1.Interval) *knov1.Interval {
 	if iv == nil {
 		return nil

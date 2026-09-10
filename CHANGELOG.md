@@ -205,6 +205,26 @@ covenants — breaking any of them requires a major version.
   The interval is now confined to its estimand's range. Clamping cannot lose
   real coverage, because no true value lived in the discarded part.
 
+- **The same fix reached only one of four branches, and a real run found the
+  rest.** The clamp above was written *inside* `adjustedWald`, which `compute`
+  reaches only for a binary score at a single trial. Three other paths kept
+  reporting out-of-range bounds, and the graded `token-f1` Goal walked straight
+  into one: a `SCORE_DOMAIN_UNIT_INTERVAL` delta reported as **`[0.813, 1.187]`
+  on a score whose maximum is 1.0**.
+
+  The test written for the first fix could not see it. It exercised
+  `SCORE_DOMAIN_BINARY` — the branch that was already fixed — which is the
+  failure mode of a test written to confirm a fix rather than to bound a defect.
+
+  The clamp now lives at the dispatch in `compute`, where the domain is known,
+  so it covers every method including any added later. It is gated on the
+  domain actually being bounded: `BINARY` and `UNIT_INTERVAL` both confine a
+  paired difference to `[-1, +1]`, while `CONTINUOUS_UNBOUNDED` promises no such
+  thing and is deliberately left alone — clamping an interval whose estimand
+  genuinely can exceed the range would discard coverage that exists. The
+  replacement test walks all four domain/trial combinations and asserts both
+  directions.
+
 ### Fixed
 
 - **A changelog fold could file entries under a release that predates them, and
