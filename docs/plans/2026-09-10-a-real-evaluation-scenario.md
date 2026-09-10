@@ -65,6 +65,11 @@ tokenizer artifact.
 `expected` string is unguessable phrasing. Both produce deltas that measure the
 wrong thing.
 
+**Superseded in part by §2c.** Three rounds of measurement moved the binding
+constraint off the domain and onto the **shape of the expected string**. This
+section still describes a necessary condition; it is no longer the first
+decision. Read §2c before authoring a Case.
+
 ### 2. Sizing — and the half of the arithmetic the first draft missed
 
 `split.MinHoldout = 20` at `DefaultHoldoutFrac = 0.2` means **N ≥ 100 Cases**.
@@ -102,12 +107,21 @@ writing rather than leave it as the thing nobody checked.
 Before a hundredth Case is written:
 
 1. Draft **20–30** Cases, not 100.
-2. Run **`kno eval inspect`** over them — no LLM call, no spend, and the tool
+2. Check the **answer format** offline, before anything else — §2c's three
+   rules, which are properties of the expected strings alone and need no model,
+   no Assets and no calls. This step was missing from the first three rounds and
+   is what they spent money rediscovering.
+3. Run **`kno eval inspect`** over them — no LLM call, no spend, and the tool
    built for exactly this question. It reports `separable_effect` per tag.
-3. Run a **cheap pilot** against a real inexpensive model to get an empirical
-   baseline failure rate and an observed effect size.
-4. Compare the observed effect against the corrected bound the full N would
-   impose. **Only then** decide whether to author the rest.
+   Note that **none of its five checks tests `separable_effect` against any
+   threshold** (§2b-bis); passing them says nothing about clearing Select.
+4. Run a **cheap pilot** against a real inexpensive model to get an empirical
+   baseline failure rate and an observed effect size — **scored against a graded
+   Goal.** `exact-match` reported this pilot's baseline as 0.000 when it was
+   0.358, and that single artifact cost two review rounds.
+5. Compare the observed effect against the **corrected** bound the full N would
+   impose — after `DefaultControlReserve` and Bonferroni, not the raw number the
+   tool prints. **Only then** decide whether to author the rest.
 
 `kno-examples`' `power-analysis` scenario is the worked example of this exact
 argument. Using it before spending is the plan; discovering it afterwards is
@@ -194,52 +208,115 @@ functionally a lookup table.
 plan's first pilot surfaced was fixed separately — the earlier `[+0.29, +1.21]`
 was a real defect in `adjustedWald`, not a curiosity.)*
 
-### 2b-ter. The one question still unanswered, and why
+### 2b-ter. The untested alternative was tested, and it was right
 
-Review's sharpest alternative explanation — that **`exact-match` on short answers
-forces binary outcomes, so the finding is about the goal rather than the
-domain** — **could not be tested cheaply, and that is a fact about the codebase
-rather than an omission.**
+The previous round recorded one explanation it could not afford to check: that
+**`exact-match` on short answers forces binary outcomes, so the finding was
+about the Goal rather than the domain.** It stayed live because `goal.Registry`
+is default-deny against a compile-time allowlist, so adding a graded Goal is a
+code change, not configuration.
 
-`kno doctor` lists exactly one Goal: `exact-match`. Adding a graded one is not
-configuration; `goal.Registry` is **default-deny against a compile-time
-allowlist**, so a new Goal requires editing `goal/registry.go` — a deliberate
-gate, added because `Goal.Score` runs outside the budget reservation.
+That gate has now been passed deliberately. `goal/tokenf1` ([PR #222](https://github.com/uknoAI/kno/pull/222))
+registers a token-level F1 Goal declaring `SCORE_DOMAIN_UNIT_INTERVAL` and
+making no provider call. The pilot's **same Cases, same Assets, same
+`openai:gpt-5.6-luna` agent** were re-scored against it:
 
-So this alternative stays live and untested. Anyone concluding "the domain forces
-all-or-nothing" should hold it loosely until a graded Goal exists, because a
-per-Case score of 0 or 1 cannot express a partial effect no matter what domain
-produced it.
+| | `exact-match` | `token-f1` |
+|---|---|---|
+| baseline | **0.000** | **0.358** |
+| per-Case baseline scores strictly inside (0,1) | 0 of 85 | **42 of 85** |
+| `codes-lookup` | +1.0000 | +1.0000 |
+| `escalation-lookup` | +1.0000 | **+0.5000** |
+| `escalation-rule` | +1.0000 | **+0.5000** |
+| `naming-rule` | +1.0000 | **+0.7077** |
 
-### 2c. The real design problem, now located
+**§2c's conclusion was wrong.** It read a uniform +1.0000 as evidence that *the
+domain* forces all-or-nothing outcomes and told the plan not to authorize
+authoring until a "partially competent" domain was found. The domain was never
+the constraint. A metric with two values reported two values.
 
-The review predicted the power budget would force all-or-nothing effects. The
-pilot shows something narrower and more useful: **the domain forces them,
-independently of N and of Asset count.**
+### 2b-quater. What the graded numbers actually say — including against this plan
 
-- **Invented conventions** — baseline 0.000, with-Asset 1.0, delta exactly 1.0.
-  Not a measurement of how much an Asset helps; a binary statement that the
-  Asset implies the answer. Circular in the way #201 was, arrived at from the
-  opposite direction.
-- **Plausible real-world policy** — baseline above zero because the model
-  sometimes guesses right, effect diluted, and possibly never clearing 0.27.
+The re-scoring settles §2b-ter and immediately raises a sharper problem, and
+the second half matters more than the first.
 
-An honest scenario lives **between** those, and finding that middle is the
-design problem. Not sizing, which §2 settled. Not Asset shape, which §2b
-falsified.
+**Read the +0.5000s before trusting them.** Under token-F1, `"tier-3"` scored
+against expected `"tier-1"` shares the token `"tier"` and receives F1 = 0.5 —
+while being entirely the wrong tier. On the `escalation` tag, whose answers are
+`tier-N`, a baseline that names *any* tier collects half credit for free. Both
++0.5000 deltas are that: **a shared-stem artifact of the answer format, not a
+measurement of partial correctness.** The graded Goal's own package doc calls
+this failure mode out by name; it is not a defect in the Goal, and it is not
+partial credit either.
 
-**What a candidate middle would need**, and none of these is yet demonstrated:
+So the honest reading of the table is narrower than it looks:
 
-- Assets that cover **only part** of their routed Cases, so the delta measures
-  coverage rather than implication;
-- a domain where the model is **partially** competent, so baseline sits well
-  above 0 and well below the with-Asset score;
-- or reasoning the model applies **imperfectly**, which risks measuring model
-  capability rather than the Asset's value.
+- The baseline of 0.358 is real and is the important number. `exact-match`'s
+  0.000 was an artifact.
+- `naming-rule`'s +0.7077 is the only delta that plausibly measures graded
+  coverage, because `vt-{env}-{resource}` has three independently-wrong fields.
+- The two +0.5000s measure the answer format's token overlap.
+- `codes-lookup`'s +1.0000 is unchanged, because `QX-NN` codes share nothing
+  when wrong.
 
-Until one of those is measured, this plan should not authorize authoring. The
-next step is another cheap pilot against a candidate middle domain — not 105
-Cases.
+### 2c. The design constraint is the ANSWER FORMAT, not the domain
+
+Every finding in this plan's three previous rounds points at one variable, and
+it is not the one any round named.
+
+- Round one blamed **Asset shape** (rule vs lookup). Falsified at power: a
+  competent model applies `ceil(hours/12)` perfectly, so a rule Asset behaves as
+  a lookup table.
+- Round two blamed **the domain** ("invented conventions force implication").
+  Falsified by the graded re-scoring: baseline 0.358, not 0.000.
+- What survives both is the **shape of the expected string**. `tier-N` admits
+  exactly two honest outcomes and one dishonest half. `QX-NN` admits two.
+  `vt-{env}-{resource}` admits four, and it is the only Case shape in the pilot
+  that produced a delta neither degenerate nor spurious.
+
+**The answer format determines what any Goal can see, and it is upstream of both
+domain and Asset design.** A scenario is authored by writing expected strings;
+choosing them last, as an encoding detail, is what produced three rounds of
+attributing the format's behavior to something else.
+
+This reframes the authoring task. The requirement is not "find a domain where
+the model is partially competent" — that was §2c's answer to a question that
+turned out to be about the metric. It is:
+
+**Every Case's expected answer must decompose into independently-verifiable
+fields, enough of them that partial coverage is distinguishable from both total
+coverage and none, and with no field sharing a literal token with a wrong
+value of another field.**
+
+Concretely, for this pilot's domain that means retiring `tier-N` (two values,
+shared stem) in favor of a form like `escalate-billing-24h` — independent
+fields, no shared stem between wrong and right answers, and a graded score that
+moves for a genuine reason. `vt-{env}-{resource}` already satisfies it and is
+the template.
+
+**This is a constraint on authoring, and it is checkable before spending
+anything.** It is a property of the expected strings alone — no model, no
+Assets, no calls. Which means it belongs in §2a's free gate, and it is the
+piece §2a was missing:
+
+- No two distinct expected values within a tag share a token (rejects `tier-N`).
+- Each tag's expected values carry ≥ 3 independent fields (so partial coverage
+  has room to register).
+- The `token-f1` score of every wrong-but-plausible answer against its expected
+  answer is 0 (the artifact check, run offline over the author's own distractor
+  list).
+
+**What is still unmeasured**, and this plan still does not authorize authoring
+until it is: whether a format satisfying those three rules produces a delta that
+clears the corrected bar of ~0.40 (§2b-bis). `naming-rule`'s +0.7077 is a single
+observation on a single tag and is the only evidence in either direction. The
+next step is the cheapest possible test of exactly that — **re-author the
+`escalation` tag's ~28 Cases into a multi-field format and re-run the same
+pilot**, ~$0.01, no new Cases elsewhere, one comparison against a number already
+in hand.
+
+That is a materially cheaper next step than §2c's "another pilot against a
+candidate middle domain," and it tests the thing that actually varies.
 
 ### 3. Both Kinds, because the bridge needs behavior Assets
 
@@ -393,13 +470,26 @@ quickstart is repointed, which is a separate change.
 the live run succeeds; the README quickstart if it is repointed;
 `docs/debt.md#161`'s disposition.
 
-## An interval above the metric's maximum
+## An interval above the metric's maximum — found here, fixed twice
 
-Noted while running the pilot, independent of this plan and unexplained: every
-delta CI extends **above 1.0** on a bounded exact-match score
-(`[+0.2917, +1.2083]`). An interval whose upper bound exceeds the metric's
-maximum is suspect. It may be `adjustedWald` behaving correctly at a boundary,
-or it may be a defect. Worth its own investigation rather than a footnote here.
+Noted while running the first pilot: every delta CI extended **above 1.0** on a
+bounded score (`[+0.2917, +1.2083]`). It was a defect, not a boundary curiosity,
+and it took two fixes because the first was too narrow.
+
+[#220](https://github.com/uknoAI/kno/pull/220) clamped `adjustedWald`, which is
+where the out-of-range bound was observed. `compute` reaches that method only
+for a binary score at a single trial, so three other branches kept reporting
+impossible bounds — and §2b-ter's graded re-scoring walked straight into one, a
+`SCORE_DOMAIN_UNIT_INTERVAL` delta reading `[0.813, 1.187]` on a score whose
+maximum is 1.0. [#223](https://github.com/uknoAI/kno/pull/223) moved the clamp to
+the dispatch in `compute`, where the domain is known, gated on the domain
+actually being bounded.
+
+Worth recording as a fact about this plan rather than about the statistics: the
+scenario work has now surfaced two real defects in shipped code (this, and the
+narrow first fix) before authoring a single production Case. A pilot that costs
+cents and exercises paths fixtures do not is buying something beyond its stated
+question.
 
 ## Phase 1 review outcome
 
@@ -415,19 +505,58 @@ and it is not "build it." It is **run the free, offline feasibility check first*
 affordable Asset count, conclude that in writing, as an argued finding rather
 than the default nobody checked.
 
+### Fourth round
+
+Still **not passed**, and the reason moved again. Each round blamed a different
+variable, and each was falsified by a measurement rather than by more review:
+
+| round | blamed | falsified by |
+|---|---|---|
+| 1 | sizing / power | §2b-bis — the bar is ~0.40, not 0.269, and the pilot then ran at power |
+| 2 | Asset shape (rule vs lookup) | §2b — identical deltas at 28 pairs |
+| 3 | the domain | §2b-ter — graded baseline 0.358, not 0.000 |
+| 4 | **the answer format** | *unmeasured — §2c names the test* |
+
+The pattern is the plan's most transferable finding: **three rounds attributed
+to domain and design what belonged to the encoding of the expected string**, and
+in each case cents of measurement settled what rounds of reasoning had not.
+Round four's claim is not exempt. §2c ends with the specific ~$0.01 test that
+would falsify it, and this plan does not authorize authoring until that test
+runs.
+
 ## Accepted risks
 
-*To be filled by the second Phase 1 review. §2a has now produced numbers, and
-they changed the plan: the free check says feasible at 3 tags and ~105 Cases,
-and the paid pilot says feasible only if a domain with partial effects can be
-found — which neither obvious domain choice provides.*
+**Accepted, pending the §2c re-author test:**
 
-Two the review should weigh:
+1. **The answer-format claim is one observation wide.** `naming-rule`'s +0.7077
+   is the only delta in the pilot that is neither degenerate nor a shared-stem
+   artifact, and one tag is not evidence that a multi-field format generally
+   clears the corrected bar. Accepted only because the test that would settle it
+   costs ~$0.01 and is this plan's next step, not because the claim is strong.
 
-1. **This costs money on a schedule, forever.** A nightly live run is a recurring
+2. **`token-f1`'s tokenizer was chosen with this pilot's tag structure in
+   view.** [PR #222](https://github.com/uknoAI/kno/pull/222) discloses this
+   directly: splitting on `[A-Za-z0-9]` runs rather than the SQuAD convention
+   preserves `vt-stg-database`'s internal structure, and `vt-{env}-{resource}`
+   is the pilot's tag most likely to show partial credit under that scheme.
+   §2c then builds a design constraint partly on that tag's result. The
+   circularity is real, and it is why §2c's three offline checks are stated as
+   properties of the expected strings rather than as "scores well under
+   `token-f1`" — but a reviewer should weigh whether that is enough separation.
+   The repository has no cheap out-of-pilot corpus to break it properly.
+
+3. **The graded Goal changes what a delta in this scenario means, and the docs
+   have not caught up.** *What the numbers mean* describes deltas over a binary
+   score. If this scenario ships against `token-f1`, that page changes in the
+   same PR — a graded delta of +0.7 is not "70% of Cases flipped."
+
+Two carried unchanged from the previous round:
+
+4. **This costs money on a schedule, forever.** A nightly live run is a recurring
    bill and a recurring source of alerts. Is the honesty worth it, or is a
    quarterly manual verification enough?
-2. **A hand-authored scenario is a claim about the product made by its authors.**
+
+5. **A hand-authored scenario is a claim about the product made by its authors.**
    It is more honest than a rigged fake, and it is still us choosing the ground.
    Review should ask whether that is worth stating in the README beside the
    numbers.
