@@ -431,7 +431,126 @@ input to give it one. Treating 0.40 as the target is safe; treating it as
 identity in §2c-ter survives contact with real model output, and an empirical
 per-pair variance for a graded score, which is the input the bar is missing.
 
-This plan does not authorize authoring until that runs.
+**That pilot has now run — §2c-quinquies.** It cost $0.07, the identity held,
+and it falsified §2c-ter's coverage claim rather than confirming it. The
+variance question below is the half it did not answer.
+
+### 2c-quinquies. The pilot ran. The identity held; the claim it was supposed to buy did not
+
+Cost: **$0.07** total, 165 calls, `openai:gpt-5.6-luna`, one tag re-authored.
+
+**The format.** `escalation`'s 35 Cases were re-authored from `tier-N` into
+`{action}-{queue}-{window}` over three invented, independent conventions —
+action from hours open (`hold`/`trace`/`flag`/`burst`), queue from category
+(`kestrel`/`osprey`/`falcon`/`harrier`), window from plan
+(`slow`/`mid`/`fast`/`rush`). The Pool became **one Asset per field** plus one
+teaching all three, so an Asset covers exactly one third of every routed Case
+and coverage is directly readable.
+
+**The four checks ran first, offline, and all passed** — 3 fields, zero
+multi-token values, zero constant tokens, zero cross-field shared tokens. The
+identity assertion ran over all **2240** (expected × distractor) pairs with
+**zero violations**.
+
+**The identity also held against real model output**, which the offline check
+cannot establish. Baseline per-field accuracy was action 0.241, queue 0.414,
+window 0.276 — mean **0.310**, equal to the reported baseline score of 0.310 to
+three decimals. `token-f1` is measuring fraction-of-fields-correct on live
+responses, exactly as §2c-ter claims.
+
+**And the coverage claim is false anyway.** §2c-ter argued the identity makes a
+graded delta "mean coverage — the share of a Case an Asset supplies." Measured
+per-field on the treatment arm (n=21 routed):
+
+| Asset | its own field | the two fields it does NOT teach | same-Case baseline |
+|---|---|---|---|
+| `action-rule` | action **1.00** | queue 0.43, window **0.62** | 0.24, 0.24 |
+| `queue-rule` | queue **1.00** | action 0.19, window **0.62** | 0.24, 0.19 |
+| `window-rule` | window **1.00** | action 0.38, queue 0.38 | 0.19, 0.29 |
+| `all-three-rules` | all three **1.00** | — | 0.19 / 0.29 / 0.19 |
+
+An Asset whose entire content is the hours→action rule moves **window** from
+0.24 to 0.62. It says nothing about windows. The reported deltas follow:
+
+```
+action-rule       +0.5641  [+0.3733, +0.7549]   coverage predicts 0.27
+window-rule       +0.4359  [+0.3089, +0.5629]   coverage predicts 0.27
+queue-rule        +0.2564  [+0.0216, +0.4912]   coverage predicts 0.22
+all-three-rules   +0.7436  [+0.5975, +0.8896]   coverage predicts 0.69
+```
+
+Two of the four single-field deltas land with the coverage prediction **outside
+their CI**, and the three singles sum to **1.256** against an all-three delta of
+**0.744** — a coverage measure would be additive and this is not.
+
+### 2c-sexies. The fifth condition: vocabularies must be unordered
+
+The leak is not in the metric. The identity held on every pair offline and on
+live output. It is in the **content**, and the pattern names it:
+
+- **window leaked hardest** — 0.62 under *both* other Assets, from ~0.20.
+  `slow`/`mid`/`fast`/`rush` is an ordered vocabulary and the plans it maps from
+  (`free`/`standard`/`business`/`enterprise`) are ordered the same way. Once any
+  Asset reveals that this domain uses deterministic lookup conventions, the
+  monotone alignment is inferable without being taught.
+- **queue leaked least, and action did not leak under it at all** (0.24 → 0.19).
+  `kestrel`/`osprey`/`falcon`/`harrier` against refund/delivery/outage/login is
+  arbitrary in both directions. `queue-rule` is the only Asset whose CI contains
+  its coverage prediction.
+
+So the fifth condition, measured rather than deduced:
+
+5. **Each field's value vocabulary must be unordered with respect to its input
+   dimension.** No monotone or semantically suggestive alignment between the
+   inputs a field keys on and the tokens it emits. Otherwise an Asset covering
+   one field leaks into the others by revealing the *style* of the convention,
+   and the delta stops being attributable to the Asset's own content.
+
+**This is why the identity ships as the assertion and the rules do not.**
+§2c-ter predicted a list of rules could be missing a fifth condition the way it
+had been missing the fourth. It was. But note what actually caught it: **the
+offline assertion did not.** The identity is a property of the metric, and this
+is a property of the content, so no string check could see it. It took the
+pilot.
+
+That is the honest scope of §2a's free gate: the checks are necessary, cheap,
+and **not sufficient**. A leak test requires spending, and $0.07 is what it
+cost.
+
+### 2c-septies. Where this leaves the plan
+
+**Better than round four believed, and for a different reason.** The corrected
+format works: a well-formed graded scenario is authorable, the baseline sits at
+0.310 rather than 0.000 or 1.000, and per-Case scores are genuinely graded.
+`all-three-rules` at **+0.7436** clears the corrected ~0.40 bar comfortably, and
+even the leakiest single-field Asset clears it.
+
+**Worse than round four believed, in the one way that matters.** A delta cannot
+be read as coverage until the leak is closed, and closing it is an authoring
+constraint nobody had stated. A scenario shipped without condition 5 would show
+Assets "earning their place" partly on inference the Assets did not supply —
+a subtler version of the circularity [#201](https://github.com/uknoAI/kno/pull/201)
+was rejected for, and one that no check in the repository would catch.
+
+**Still not authorizing authoring.** The next step is now specific and cheap:
+re-author `window`'s vocabulary to be arbitrary (`quill`/`tarn`/`brisk`/`moss`
+against free/standard/business/enterprise), re-run the same pilot, and confirm
+the single-field deltas collapse toward their coverage predictions and the
+three become additive. If they do, condition 5 is confirmed and the format is
+settled. If they do not, the leak has another source and the coverage reading
+should be dropped from the plan rather than patched a third time.
+
+### 2c-octies. A note on the first baseline run
+
+The first attempt reported **0.000**, and it was an artifact of a flag this
+plan's own author set: `--max-output-tokens 24` starved a reasoning model, and
+all 29 outcomes came back with `truncated = 1` and empty output. The engine
+recorded the truncation correctly and the score was honest about what it saw.
+
+Recorded because it is the same shape as everything else this plan documents: a
+number that looked like a finding, produced by the instrument rather than the
+subject, and cheap to catch only because someone asked why chance-level guessing
+would score zero.
 
 ### 3. Both Kinds, because the bridge needs behavior Assets
 
@@ -678,6 +797,16 @@ mean coverage.
 ## Accepted risks
 
 **Accepted, pending the §2c re-author test:**
+
+0. **The coverage reading is falsified, not merely unsupported.** §2c-quinquies
+   measured an Asset teaching one field raising fields it does not teach
+   (window 0.24 → 0.62 under `action-rule`), with two of four single-field
+   deltas landing with their coverage prediction outside the CI and the singles
+   summing to 1.256 against an all-three delta of 0.744. Condition 5
+   (§2c-sexies) is the proposed cause and is **itself unconfirmed** — it is one
+   round of pattern-matching on three fields, which is exactly the evidence
+   standard that has failed this plan four times. It is written down as the next
+   $0.07 test, not as a finding.
 
 1. **The answer-format claim rests on zero clean observations, not one.**
    Round four claimed `naming-rule`'s +0.7077 as its single supporting
