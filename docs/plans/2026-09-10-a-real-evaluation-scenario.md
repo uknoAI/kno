@@ -92,6 +92,12 @@ accuracy space** — which is not "the model sometimes gets the policy wrong and
 the Asset fixes it." It is "wrong on essentially every routed Case without the
 Asset, right with it."
 
+**Superseded — see §2b-bis and §2c-undecies.** The 0.5–0.6 estimate here was
+corrected to ~0.40 once `DefaultControlReserve` and Bonferroni were applied, and
+the pilot then measured a per-pair SD 1.7–3.2× below the worst case the bar
+assumes. Kept as written because the reasoning that follows it is still why the
+plan did not simply start authoring.
+
 **That is the rejected plan's all-or-nothing shape, reproduced with real money.**
 Nobody would set out to reintroduce circularity; the power budget would force it
 under schedule pressure.
@@ -551,6 +557,125 @@ Recorded because it is the same shape as everything else this plan documents: a
 number that looked like a finding, produced by the instrument rather than the
 subject, and cheap to catch only because someone asked why chance-level guessing
 would score zero.
+
+### 2c-nonies. Round 6: the identity is narrower than stated, and needs the answer
+
+Review found the identity's scope wrong, and it is wrong in the direction that
+matters. **All four conditions are properties of the expected strings alone** —
+stated as a feature, because that is what made them checkable offline. But the
+identity is a claim about a *response*, and nothing in the list constrains the
+response at all. Verified against `goal/tokenf1` on `main`:
+
+| expected | answer | F1 | fields right |
+|---|---|---|---|
+| `hold-kestrel-slow` | `hold-kestrel-slow-primary-hot` | **0.7500** | 3 of 3 |
+| `hold-kestrel-slow` | `The answer is hold-kestrel-slow` | **0.6667** | 3 of 3 |
+| `hold-kestrel-slow` | `hold-kestrel` | **0.8000** | 2 of 3 |
+| `hold-kestrel-slow` | `I cannot determine the kestrel or slow values but hold is right` | **0.4000** | 0 committed |
+
+A wholly correct answer wrapped in four words of prose scores 0.667. A dropped
+field is *over*-credited. A refusal that commits to nothing collects 0.40 for
+mentioning the words. Conditions 1, 2 and 4 all hold throughout — the expected
+string is fine; the answer is not.
+
+**The sixth condition, and it is not like the others:**
+
+6. **The answer must tokenize to the same length as the expected string.**
+   `len(tokenize(answer)) == len(tokenize(expected))`. Repetition alone does
+   *not* break the identity — `f1` intersects multisets with
+   `min(gotCount, wantCount)`, so `hold-kestrel-kestrel` scores 0.6667, exactly
+   2-of-3 — so the condition is length, not distinctness.
+
+**And the offline assertion cannot check it, by construction.** A "distractor"
+is what an author writes when asked for a plausible wrong answer, and nobody
+hand-writes a hedge, a truncation, or a prose wrapper. The check only ever
+samples the format-conforming shapes it was built to bless. That is the same
+self-referential failure as rounds 3, 4 and 5, one level more abstract, and
+§2c-ter's claim that an assertion "catches a fifth condition without anyone
+deducing it" is now false twice over — conditions 5 and 6 were both caught by
+running things, not by checking strings.
+
+**What the pilot says about it: 165 of 165 responses conformed** — every
+baseline and every treatment response across all four Assets tokenized to
+exactly three. So §2c-quinquies' numbers are unaffected, and the identity there
+is real. But that is the *prompt's* doing — it enumerates each field's
+vocabulary and says "Answer with just the routing code" — and not a property of
+the format. The pilot dodged this; it did not refute it.
+
+So conformance is **a number to measure and report, not a condition to assume**:
+cheap (a token count), available on every run, and the gate on whether a delta
+may be read through the identity at all. A scenario reporting graded deltas
+without its conformance rate is reporting a number whose meaning it has not
+established.
+
+### 2c-decies. Two mechanisms break the coverage reading, not one
+
+§2c-quinquies measured one: an Asset teaching one field lifts fields it does not
+teach. Review found a second, by argument, and it is independent:
+
+**A field the model already gets right at baseline is correct in both arms**, so
+it is baked into the with-Asset score exactly as if the Asset had supplied it.
+The identity is a fact about one scored response — what fraction of fields it
+got right. Coverage is a claim about *attribution between two arms*. No
+arithmetic identity bridges those, and §2c-ter asserted the bridge without
+building it.
+
+The pilot's baseline was 0.310, so roughly a third of every treatment score is
+this. Both mechanisms push the same direction — deltas read as coverage
+**overstate** what an Asset supplied — and neither is fixed by the format.
+
+### 2c-undecies. §2c-quater's "conservative" was reasoned from a doc comment; here is the measurement
+
+**The framing was wrong.** §2c-quater called `sdMaxPairedBinary = √0.5` a
+binary-metric bound misapplied to a graded one. By Popoviciu, any score bounded
+in `[0,1]` has variance ≤ 0.25, so a paired difference has SD ≤ √0.5 —
+**the same bound, for any unit-interval score, graded or not.** It is
+domain-agnostic, and it is *tight* exactly when a graded score behaves like a
+binary one. Quoting `detectable.go`'s own doc back at the plan was not a check.
+
+**Measured from the pilot instead**, recovering per-pair SD from each reported
+interval at n_pairs = 13:
+
+| Asset | delta | half-width | per-pair SD | vs √0.5 |
+|---|---|---|---|---|
+| `window-rule` | +0.4359 | 0.1270 | **0.2195** | 3.22× narrower |
+| `all-three-rules` | +0.7436 | 0.1460 | **0.2524** | 2.80× narrower |
+| `action-rule` | +0.5641 | 0.1908 | **0.3298** | 2.14× narrower |
+| `queue-rule` | +0.2564 | 0.2348 | **0.4059** | 1.74× narrower |
+
+So the bound **is** loose here, by 1.7× to 3.2× — but as an empirical property
+of this scenario's score distribution, not as a consequence of the Goal being
+graded. A graded Goal whose scores sit at the extremes gets no reduction at all;
+`codes-lookup`'s +1.0000 in §2b-ter is exactly that case.
+
+*(Independent confirmation of the identity, noticed while doing this: all four
+deltas are exact multiples of 1/39 = 1/(3 × 13). Every per-Case score landed on
+a third. That is the identity holding on live output, arrived at from the
+arithmetic rather than from the per-field dump.)*
+
+### 2c-duodecies. Standing count
+
+Six rounds, six variables blamed, five falsified by running something:
+
+| round | blamed | falsified by |
+|---|---|---|
+| 1 | sizing / power | the corrected arithmetic, then a powered rerun |
+| 2 | Asset shape | identical deltas at 28 pairs |
+| 3 | the domain | graded baseline 0.358, not 0.000 |
+| 4 | the answer format (v1 rules) | the rules failed their own named template |
+| 5 | the answer format (identity) | **holds** — but does not buy coverage |
+| 6 | conditions 5 and 6 | *unmeasured* |
+
+Round 5 is the first claim to survive contact. It survived as a smaller thing
+than it was advertised as: `token-f1` measures fraction-of-fields-correct, which
+is worth having and is **not** a coverage measure.
+
+The next test is unchanged in cost and now carries two questions: re-author
+`window`'s vocabulary to be arbitrary, re-run, and check both whether the leak
+closes (condition 5) and whether conformance stays at 1.00 when a field's
+mapping is unguessable (condition 6). ~$0.07.
+
+**Still not authorizing authoring.**
 
 ### 3. Both Kinds, because the bridge needs behavior Assets
 
