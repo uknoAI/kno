@@ -113,16 +113,75 @@ Before a hundredth Case is written:
 argument. Using it before spending is the plan; discovering it afterwards is
 what the first draft would have done.
 
-### 2b. Invented facts, not plausible policy
+### 2b. What the feasibility check and the pilot actually measured
 
-The domain should turn on **arbitrary invented conventions** — the shape
-`diy-ablation` uses with its invented API — rather than real-world policy like
-refund windows.
+Both halves were run. The free half is encouraging; the paid half falsified the
+design.
 
-A model can hit "5 business days" by prior or luck at a non-trivial rate, which
-dilutes the effect exactly where the power budget is thinnest. An invented
-convention has a controllable near-zero baseline hit rate, which is what makes
-the measured delta mean what it says.
+**Free half — `kno eval inspect`, no spend.** The required separable effect is
+driven more by **Asset count** than by N:
+
+| | required effect |
+|---|---|
+| N=105, 3 tags | **0.269** — 0 of 5 checks flagged |
+| N=105, 5 tags | 0.352 |
+| N=105, 7 tags | 0.427 |
+| N=150, 3 tags | 0.220 |
+| N=210, 3 tags | 0.184 |
+
+A 30-Case draft measures **0.54**, matching the review's projection almost
+exactly — but that projection assumed 5 Assets. At **3 tags and ~105 Cases the
+bar is 0.27** and every check passes, including the holdout floor. Going 3→7
+tags costs more than going N=210→105 saves, which was in neither the plan nor
+the review.
+
+**Paid half — a 30-Case pilot against `openai:gpt-5.6-luna`, ~100 calls,
+cents.** Baseline scored **0.000**, 26 of 26 wrong: invented conventions are
+genuinely unguessable, as designed. Then four Assets were measured — a **rule**
+and a **lookup** for each rule-derivable tag, plus an arbitrary tag only a
+lookup can serve:
+
+```
+codes-lookup       +1.0000  [+0.2917, +1.2327]
+escalation-lookup  +1.0000  [+0.2917, +1.2083]
+escalation-rule    +1.0000  [+0.2917, +1.2083]
+naming-rule        +1.0000  [+0.1958, +1.2327]
+```
+
+**All four are identical. The rule/lookup distinction this plan asserted does
+not exist empirically.** A competent model applies `ceil(hours/12)` perfectly,
+so a rule Asset lands at 1.0 exactly like a lookup table. The distinction was
+reasoned, not measured, and one measurement retired it.
+
+### 2c. The real design problem, now located
+
+The review predicted the power budget would force all-or-nothing effects. The
+pilot shows something narrower and more useful: **the domain forces them,
+independently of N and of Asset count.**
+
+- **Invented conventions** — baseline 0.000, with-Asset 1.0, delta exactly 1.0.
+  Not a measurement of how much an Asset helps; a binary statement that the
+  Asset implies the answer. Circular in the way #201 was, arrived at from the
+  opposite direction.
+- **Plausible real-world policy** — baseline above zero because the model
+  sometimes guesses right, effect diluted, and possibly never clearing 0.27.
+
+An honest scenario lives **between** those, and finding that middle is the
+design problem. Not sizing, which §2 settled. Not Asset shape, which §2b
+falsified.
+
+**What a candidate middle would need**, and none of these is yet demonstrated:
+
+- Assets that cover **only part** of their routed Cases, so the delta measures
+  coverage rather than implication;
+- a domain where the model is **partially** competent, so baseline sits well
+  above 0 and well below the with-Asset score;
+- or reasoning the model applies **imperfectly**, which risks measuring model
+  capability rather than the Asset's value.
+
+Until one of those is measured, this plan should not authorize authoring. The
+next step is another cheap pilot against a candidate middle domain — not 105
+Cases.
 
 ### 3. Both Kinds, because the bridge needs behavior Assets
 
@@ -276,6 +335,14 @@ quickstart is repointed, which is a separate change.
 the live run succeeds; the README quickstart if it is repointed;
 `docs/debt.md#161`'s disposition.
 
+## An interval above the metric's maximum
+
+Noted while running the pilot, independent of this plan and unexplained: every
+delta CI extends **above 1.0** on a bounded exact-match score
+(`[+0.2917, +1.2083]`). An interval whose upper bound exceeds the metric's
+maximum is suspect. It may be `adjustedWald` behaving correctly at a boundary,
+or it may be a defect. Worth its own investigation rather than a footnote here.
+
 ## Phase 1 review outcome
 
 **Did not pass.** Three blockers, all verified against the code before amending:
@@ -292,7 +359,10 @@ than the default nobody checked.
 
 ## Accepted risks
 
-*To be filled by a second Phase 1 review, once §2a has produced numbers.*
+*To be filled by the second Phase 1 review. §2a has now produced numbers, and
+they changed the plan: the free check says feasible at 3 tags and ~105 Cases,
+and the paid pilot says feasible only if a domain with partial effects can be
+found — which neither obvious domain choice provides.*
 
 Two the review should weigh:
 
