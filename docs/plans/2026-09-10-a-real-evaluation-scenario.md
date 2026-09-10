@@ -153,6 +153,64 @@ not exist empirically.** A competent model applies `ceil(hours/12)` perfectly,
 so a rule Asset lands at 1.0 exactly like a lookup table. The distinction was
 reasoned, not measured, and one measurement retired it.
 
+### 2b-bis. Third round: the arithmetic corrected, the pilot powered
+
+Review found the first pass wrong in two ways and both were checked.
+
+**The bar was understated by roughly half.** `separable_effect` is
+`MinDetectableEffect` over a tag's **full dev count**, at the **raw** level. It
+ignores two things Select actually applies: `DefaultControlReserve = 0.3`, which
+removes 30% of dev Cases from routing before clustering, and the Bonferroni
+correction over **Assets screened**. Corrected:
+
+| N | Assets | tool says | +reserve | +Bonferroni |
+|---|---|---|---|---|
+| 105 | 3 | 0.269 | 0.324 | **0.396** |
+| 105 | 6 | 0.269 | 0.324 | **0.436** |
+| 210 | 6 | 0.184 | 0.221 | 0.313 |
+
+So "feasible at 0.269" was wrong; the real bar at the proposed size is ~0.40.
+Note also that **none of `eval inspect`'s five checks test `separable_effect`
+against any threshold** — passing them says nothing about clearing Select.
+
+**The falsification was underpowered, and now is not.** The first pilot had 5–6
+pairs per Asset, where a genuinely 85%-reliable rule lands all-correct about 38%
+of the time — the review was right that a null result there proves nothing. Rerun
+at **~28 pairs** (105 Cases, 3 tags, 226 measurements, $0.03):
+
+```
+codes-lookup       +1.0000  [+0.6773, +1.0000]
+escalation-lookup  +1.0000  [+0.6587, +1.0000]
+escalation-rule    +1.0000  [+0.6587, +1.0000]
+naming-rule        +1.0000  [+0.6939, +1.0000]
+```
+
+Identical again, with intervals a third the width. At 28 pairs an 85% rule lands
+all-correct roughly 1% of the time, so **the rule/lookup falsification holds at
+power.** A competent model applies the rule perfectly, which makes a rule Asset
+functionally a lookup table.
+
+*(Those upper bounds read exactly 1.0000 because the out-of-range interval this
+plan's first pilot surfaced was fixed separately — the earlier `[+0.29, +1.21]`
+was a real defect in `adjustedWald`, not a curiosity.)*
+
+### 2b-ter. The one question still unanswered, and why
+
+Review's sharpest alternative explanation — that **`exact-match` on short answers
+forces binary outcomes, so the finding is about the goal rather than the
+domain** — **could not be tested cheaply, and that is a fact about the codebase
+rather than an omission.**
+
+`kno doctor` lists exactly one Goal: `exact-match`. Adding a graded one is not
+configuration; `goal.Registry` is **default-deny against a compile-time
+allowlist**, so a new Goal requires editing `goal/registry.go` — a deliberate
+gate, added because `Goal.Score` runs outside the budget reservation.
+
+So this alternative stays live and untested. Anyone concluding "the domain forces
+all-or-nothing" should hold it loosely until a graded Goal exists, because a
+per-Case score of 0 or 1 cannot express a partial effect no matter what domain
+produced it.
+
 ### 2c. The real design problem, now located
 
 The review predicted the power budget would force all-or-nothing effects. The
