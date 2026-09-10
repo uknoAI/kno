@@ -372,13 +372,33 @@ model, no Assets, no calls:
    break this, crediting a wrong answer for naming the wrong resource.
 3. **Each tag's expected values carry ≥ 3 independently-variable fields**, so
    partial coverage has resolution finer than {0, ½, 1}.
+4. **Every field's value is exactly one token.** Found while checking this
+   section's own identity rather than by review, which is the point of writing
+   the check down as something runnable:
+
+   | expected | answered | F1 | fields right |
+   |---|---|---|---|
+   | `stg-useast1-primary` | `prd-useast1-primary` | 0.6667 | 2 of 3 ✓ |
+   | `stg-us-east-1-primary` | `prd-us-east-1-primary` | **0.8000** | 2 of 3 ✗ |
+   | `stg-us-east-1-primary` | `prd-eu-west-2-primary` | **0.2000** | 1 of 3 ✗ |
+
+   F1 weights by *tokens*, not by fields, so a three-token region value counts
+   three times toward a one-field decision — inflating a near-miss and
+   deflating a partial hit. Write `useast1`, or split the region into three
+   genuine fields. Either restores the identity; leaving it as prose does not.
 
 **The verification is one assertion, run offline over the author's own
 distractor list:** for every (expected, distractor) pair, `token-f1` must equal
-`fieldsCorrect / fieldsTotal` exactly. Conditions 1 and 2 are what make that
-identity hold, so the assertion tests them both and is the check that actually
-ships. It is a property of the strings and it is falsifiable — the table above
-is it, run by hand.
+`fieldsCorrect / fieldsTotal` exactly. Conditions 1, 2 and 4 are jointly what
+make that identity hold, so the assertion tests all three and is the check that
+actually ships — condition 3 is a separate resolution requirement it does not
+cover.
+
+Stating it as one executable assertion rather than as four prose rules is
+deliberate, and check 4 is why: the identity is the claim, the rules are only
+the currently-known sufficient conditions for it, and **a fourth condition was
+already missing from the list on first writing.** An assertion over the author's
+own distractors catches a fifth without anyone deducing it.
 
 ### 2c-quater. What is still unmeasured, and the bar it has to clear
 
