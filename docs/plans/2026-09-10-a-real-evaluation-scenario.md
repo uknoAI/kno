@@ -121,7 +121,11 @@ Before a hundredth Case is written:
    0.358, and that single artifact cost two review rounds.
 5. Compare the observed effect against the **corrected** bound the full N would
    impose — after `DefaultControlReserve` and Bonferroni, not the raw number the
-   tool prints. **Only then** decide whether to author the rest.
+   tool prints. Note that bound is computed for a **binary** metric regardless of
+   the Goal in use (§2c-quater): `interval.MinDetectableEffect` takes no domain
+   parameter. Against a graded Goal it is conservative, by an amount nothing in
+   the tree can currently quantify. **Only then** decide whether to author the
+   rest.
 
 `kno-examples`' `power-analysis` scenario is the worked example of this exact
 argument. Using it before spending is the plan; discovering it afterwards is
@@ -208,7 +212,7 @@ functionally a lookup table.
 plan's first pilot surfaced was fixed separately — the earlier `[+0.29, +1.21]`
 was a real defect in `adjustedWald`, not a curiosity.)*
 
-### 2b-ter. The untested alternative was tested, and it was right
+### 2b-ter. The untested alternative was tested — as a fresh draw, not a re-score
 
 The previous round recorded one explanation it could not afford to check: that
 **`exact-match` on short answers forces binary outcomes, so the finding was
@@ -216,10 +220,22 @@ about the Goal rather than the domain.** It stayed live because `goal.Registry`
 is default-deny against a compile-time allowlist, so adding a graded Goal is a
 code change, not configuration.
 
-That gate has now been passed deliberately. `goal/tokenf1` ([PR #222](https://github.com/uknoAI/kno/pull/222))
-registers a token-level F1 Goal declaring `SCORE_DOMAIN_UNIT_INTERVAL` and
-making no provider call. The pilot's **same Cases, same Assets, same
-`openai:gpt-5.6-luna` agent** were re-scored against it:
+That gate has now been passed deliberately. `goal/tokenf1` (merged as
+[#222](https://github.com/uknoAI/kno/pull/222)) registers a token-level F1 Goal
+declaring `SCORE_DOMAIN_UNIT_INTERVAL` and making no provider call. The pilot's
+**same Cases, same Assets, same `openai:gpt-5.6-luna` agent** were run against
+it:
+
+**Not a re-score, and the distinction matters.** Nothing in the CLI or `core`
+re-scores a recorded `Run`'s stored responses against a different Goal without
+re-invoking the agent, so this is a **second live draw** from a
+non-deterministic API. #222's own accepted risks say so; an earlier draft of
+this section wrote "re-scored" three times and flattened that away.
+
+The qualitative conclusion survives regardless — token-F1's mechanics guarantee
+per-Case scores off `{0,1}` on multi-token answers, independent of which draw
+produced them. The *specific* numbers below carry the confound and should be
+read as one sample, not as the same outputs seen through two lenses.
 
 | | `exact-match` | `token-f1` |
 |---|---|---|
@@ -261,62 +277,141 @@ So the honest reading of the table is narrower than it looks:
 
 ### 2c. The design constraint is the ANSWER FORMAT, not the domain
 
-Every finding in this plan's three previous rounds points at one variable, and
-it is not the one any round named.
+Every finding in this plan's previous rounds points at one variable, and it is
+not the one any round named.
 
 - Round one blamed **Asset shape** (rule vs lookup). Falsified at power: a
   competent model applies `ceil(hours/12)` perfectly, so a rule Asset behaves as
   a lookup table.
 - Round two blamed **the domain** ("invented conventions force implication").
-  Falsified by the graded re-scoring: baseline 0.358, not 0.000.
+  Falsified by the graded pilot: baseline 0.358, not 0.000.
 - What survives both is the **shape of the expected string**. `tier-N` admits
-  exactly two honest outcomes and one dishonest half. `QX-NN` admits two.
-  `vt-{env}-{resource}` admits four, and it is the only Case shape in the pilot
-  that produced a delta neither degenerate nor spurious.
+  two honest outcomes and one spurious half. `QX-NN` admits two.
+  `vt-{env}-{resource}` produced the pilot's only delta that was neither
+  degenerate nor obviously spurious.
 
 **The answer format determines what any Goal can see, and it is upstream of both
 domain and Asset design.** A scenario is authored by writing expected strings;
 choosing them last, as an encoding detail, is what produced three rounds of
 attributing the format's behavior to something else.
 
-This reframes the authoring task. The requirement is not "find a domain where
-the model is partially competent" — that was §2c's answer to a question that
-turned out to be about the metric. It is:
+### 2c-bis. The first draft of this section proposed rules its own template failed
 
-**Every Case's expected answer must decompose into independently-verifiable
-fields, enough of them that partial coverage is distinguishable from both total
-coverage and none, and with no field sharing a literal token with a wrong
-value of another field.**
+Round four's first attempt stated three checks: no two expected values in a tag
+share a token, ≥3 independent fields, and every wrong-but-plausible answer
+scores 0. It named `vt-{env}-{resource}` as the template that already satisfied
+them.
 
-Concretely, for this pilot's domain that means retiring `tier-N` (two values,
-shared stem) in favor of a form like `escalate-billing-24h` — independent
-fields, no shared stem between wrong and right answers, and a graded score that
-moves for a genuine reason. `vt-{env}-{resource}` already satisfies it and is
-the template.
+**Phase 1 review ran those rules against that template and it failed two of
+three.** Measured against `goal/tokenf1` as implemented:
 
-**This is a constraint on authoring, and it is checkable before spending
-anything.** It is a property of the expected strings alone — no model, no
-Assets, no calls. Which means it belongs in §2a's free gate, and it is the
-piece §2a was missing:
+| expected | answered | F1 | fields right |
+|---|---|---|---|
+| `vt-stg-database` | `vt-prd-database` | **0.6667** | 1 of 2 |
+| `vt-stg-database` | `vt-prd-cache` | **0.3333** | **0 of 2** |
+| `tier-1` | `tier-3` | 0.5000 | 0 of 1 |
+| `escalate-billing-24h` | `escalate-shipping-48h` | **0.3333** | **0 of 2** |
 
-- No two distinct expected values within a tag share a token (rejects `tier-N`).
-- Each tag's expected values carry ≥ 3 independent fields (so partial coverage
-  has room to register).
-- The `token-f1` score of every wrong-but-plausible answer against its expected
-  answer is 0 (the artifact check, run offline over the author's own distractor
-  list).
+Every value in the `naming` tag shares the literal `vt`, which is exactly what
+rule 1 forbade — and a wholly wrong answer collects 0.3333 for it, which is
+worse than the `tier-N` artifact the rules were written to retire. The proposed
+replacement, `escalate-billing-24h`, reproduces the defect through its own
+constant `escalate`.
 
-**What is still unmeasured**, and this plan still does not authorize authoring
-until it is: whether a format satisfying those three rules produces a delta that
-clears the corrected bar of ~0.40 (§2b-bis). `naming-rule`'s +0.7077 is a single
-observation on a single tag and is the only evidence in either direction. The
-next step is the cheapest possible test of exactly that — **re-author the
-`escalation` tag's ~28 Cases into a multi-field format and re-run the same
-pilot**, ~$0.01, no new Cases elsewhere, one comparison against a number already
-in hand.
+Recorded plainly because it is the same failure the plan spends four rounds
+documenting: **the rules were written to describe the one result that looked
+good, and were never run against it.** They were stated as string properties
+specifically so they would not be circular, and stating them that way did not
+make them non-circular — it only hid that they had not been checked. Five
+minutes with the tokenizer already in the tree falsified them.
 
-That is a materially cheaper next step than §2c's "another pilot against a
-candidate middle domain," and it tests the thing that actually varies.
+### 2c-ter. The corrected constraint: constant tokens, not shared tokens
+
+The broken rules conflated two things that behave oppositely.
+
+- **Spurious credit** comes from a token that is *constant across the tag*.
+  `tier` appears in every `tier-N` value, so it distinguishes nothing, carries
+  no information, and inflates every score by a fixed amount. `vt` is the same.
+- **Genuine partial credit** comes from a field the model *got right* while
+  getting another wrong. Answering `prd-database` for `stg-database` is a real
+  partial success: the resource is correct and the environment is not.
+
+Rule 1 banned both. Rule 3 — "wrong-but-plausible scores 0" — banned the second
+outright, which would forbid partial credit entirely and hand back the binary
+metric this whole section exists to escape. Rule 3 was not too weak; it was
+self-defeating.
+
+Strip the constant prefix and the metric becomes exactly what is wanted:
+
+| expected | answered | F1 | fields right |
+|---|---|---|---|
+| `stg-database` | `stg-database` | 1.0000 | 2 of 2 |
+| `stg-database` | `prd-database` | 0.5000 | 1 of 2 |
+| `stg-database` | `prd-cache` | **0.0000** | 0 of 2 |
+| `stg-database-primary` | `prd-database-primary` | 0.6667 | 2 of 3 |
+| `stg-database-primary` | `prd-cache-primary` | 0.3333 | 1 of 3 |
+| `stg-database-primary` | `prd-cache-replica` | **0.0000** | 0 of 3 |
+
+**Token-F1 equals the fraction of independently-variable fields answered
+correctly, exactly, with no residual.** That is the property that makes a graded
+delta mean *coverage* — the share of a Case an Asset supplies — rather than
+implication. It is not an approximation and it is not a heuristic: it is an
+identity that holds whenever the two conditions below hold.
+
+**The corrected checks**, all properties of the expected strings alone — no
+model, no Assets, no calls:
+
+1. **No token appears in every expected value of a tag.** A constant token
+   distinguishes nothing and inflates every score. This rejects `tier-N` (via
+   `tier`) and rejects `vt-{env}-{resource}` (via `vt`) — and the fix for the
+   second is to drop the prefix from the *expected string*, not to abandon the
+   format. The prefix can still appear in the question.
+2. **Field vocabularies are pairwise token-disjoint.** No token may appear as a
+   value of two different fields, and no two values of the same field may share
+   a token. `database` and `database-replica` as sibling resource values would
+   break this, crediting a wrong answer for naming the wrong resource.
+3. **Each tag's expected values carry ≥ 3 independently-variable fields**, so
+   partial coverage has resolution finer than {0, ½, 1}.
+
+**The verification is one assertion, run offline over the author's own
+distractor list:** for every (expected, distractor) pair, `token-f1` must equal
+`fieldsCorrect / fieldsTotal` exactly. Conditions 1 and 2 are what make that
+identity hold, so the assertion tests them both and is the check that actually
+ships. It is a property of the strings and it is falsifiable — the table above
+is it, run by hand.
+
+### 2c-quater. What is still unmeasured, and the bar it has to clear
+
+**Unmeasured:** whether a format satisfying those checks produces a delta that
+clears the corrected bar. `naming-rule`'s +0.7077 is one observation, on a tag
+that *fails* check 1, so it is weaker evidence than round four first claimed —
+part of that 0.7077 is the constant `vt` inflating every score in the tag,
+baseline included.
+
+**And the bar itself is measured with the wrong instrument.** §2b-bis's ~0.40
+derives from `kno eval inspect`'s `separable_effect`, which calls
+`interval.MinDetectableEffect` — and that function takes **no domain
+parameter**. It uses `sdMaxPairedBinary = √0.5` unconditionally
+(`stats/interval/detectable.go:17,54`), the worst-case standard deviation of a
+paired *binary* difference. Its own doc says so: *"it over-warns on a continuous
+Goal whose true variance is lower — conservative in the recoverable
+direction."*
+
+So ~0.40 is a binary-metric bar applied to a graded metric, and it is
+conservative rather than wrong. A graded score with genuinely lower per-pair
+variance clears Select at a smaller true effect than 0.40, and **nothing in the
+tree can currently say how much smaller**, because the estimate has no domain
+input to give it one. Treating 0.40 as the target is safe; treating it as
+*the* number is not, and round four's first draft did the latter.
+
+**The next step is the cheapest test of exactly this:** re-author the
+`escalation` tag's ~28 Cases into a checks-passing multi-field format —
+`{action}-{queue}-{window}` with no constant token — and re-run the same pilot.
+~$0.01, no new Cases elsewhere, and it yields two things at once: whether the
+identity in §2c-ter survives contact with real model output, and an empirical
+per-pair variance for a graded score, which is the input the bar is missing.
+
+This plan does not authorize authoring until that runs.
 
 ### 3. Both Kinds, because the bridge needs behavior Assets
 
@@ -333,10 +428,16 @@ repository can show an Asset earning its place.**
 
 The first draft proposed a support/policy domain without noticing. Two authors
 converging on the same domain from different directions is itself informative
-about what is easy to make legible, and §2b now argues for invented conventions
-instead. Whatever domain is chosen, the plan must state plainly whether this is
-that scenario's live-model successor — named so a reader is not left guessing
-which is "the real one" — or a deliberately different thing, and why.
+about what is easy to make legible.
+
+**Answered, and the answer is "a deliberately different thing."** §2b settled it
+implicitly by pilotting invented Vantril conventions rather than the refund
+domain, and it stayed phrased as an open question for two rounds afterwards.
+Stated explicitly now: this is **not** `support-refunds`' live-model successor.
+That scenario's README says no scenario in that repository can show an Asset
+earning its place, and this plan takes a different domain precisely so it is not
+inheriting that constraint. The scenario README names both and says which is
+which, so a reader is not left guessing.
 
 ### 4. Where it lives
 
@@ -485,6 +586,14 @@ maximum is 1.0. [#223](https://github.com/uknoAI/kno/pull/223) moved the clamp t
 the dispatch in `compute`, where the domain is known, gated on the domain
 actually being bounded.
 
+**Both are on `main`** (#222 and #223 merged 2026-09-10), so the clean `1.0000`
+bounds in §2b-ter's table are now reproducible from a checkout. They were not
+when this plan first presented them: Phase 1 review caught that the numbers were
+produced against two open, unreviewed branches and presented in past tense as
+settled. The finding was right at the time and is recorded rather than deleted
+— presenting private-build numbers as reproducible is the same class of error as
+the rest of this document catalogues.
+
 Worth recording as a fact about this plan rather than about the statistics: the
 scenario work has now surfaced two real defects in shipped code (this, and the
 narrow first fix) before authoring a single production Case. A pilot that costs
@@ -520,30 +629,60 @@ variable, and each was falsified by a measurement rather than by more review:
 The pattern is the plan's most transferable finding: **three rounds attributed
 to domain and design what belonged to the encoding of the expected string**, and
 in each case cents of measurement settled what rounds of reasoning had not.
-Round four's claim is not exempt. §2c ends with the specific ~$0.01 test that
-would falsify it, and this plan does not authorize authoring until that test
-runs.
+
+### Fifth round
+
+Round four's own claim was not exempt, and review caught it the same way. §2c's
+first draft stated three offline checks and named `vt-{env}-{resource}` as the
+template satisfying them; **run against `goal/tokenf1` as implemented, that
+template failed two of the three** (§2c-bis). The rules had been written to
+describe the one result that looked good and never executed against it — the
+fourth instance of the plan's own documented pattern, produced by the section
+naming the pattern.
+
+Three further findings held on inspection and are folded in: the graded
+comparison was a **fresh live draw**, not a re-score, and §2b-ter now says so;
+the clean interval bounds were presented as reproducible while resting on **two
+open PRs**, now merged and noted; and the ~0.40 bar is computed by a function
+with **no domain parameter** (§2c-quater), making it a binary-metric bar applied
+to a graded metric.
+
+§2c-ter is the repair, and it is a different rule rather than a patched one: the
+disqualifying property is a token **constant across a tag**, not a token
+**shared between values**. Those behave oppositely — the first is pure
+inflation, the second is genuine partial correctness — and the first draft
+banned both. With constants stripped, token-F1 equals the fraction of fields
+answered correctly *exactly*, which is the identity that makes a graded delta
+mean coverage.
 
 ## Accepted risks
 
 **Accepted, pending the §2c re-author test:**
 
-1. **The answer-format claim is one observation wide.** `naming-rule`'s +0.7077
-   is the only delta in the pilot that is neither degenerate nor a shared-stem
-   artifact, and one tag is not evidence that a multi-field format generally
-   clears the corrected bar. Accepted only because the test that would settle it
-   costs ~$0.01 and is this plan's next step, not because the claim is strong.
+1. **The answer-format claim rests on zero clean observations, not one.**
+   Round four claimed `naming-rule`'s +0.7077 as its single supporting
+   measurement. §2c-bis then showed that tag **fails check 1** — every value
+   shares `vt`, which inflates baseline and treatment alike — so 0.7077 is not
+   evidence for the corrected constraint either. §2c-ter's identity is currently
+   supported by **arithmetic on the tokenizer and nothing else**. Accepted only
+   because the test that would supply a real observation costs ~$0.01 and is this
+   plan's next step.
 
 2. **`token-f1`'s tokenizer was chosen with this pilot's tag structure in
-   view.** [PR #222](https://github.com/uknoAI/kno/pull/222) discloses this
-   directly: splitting on `[A-Za-z0-9]` runs rather than the SQuAD convention
-   preserves `vt-stg-database`'s internal structure, and `vt-{env}-{resource}`
-   is the pilot's tag most likely to show partial credit under that scheme.
-   §2c then builds a design constraint partly on that tag's result. The
-   circularity is real, and it is why §2c's three offline checks are stated as
-   properties of the expected strings rather than as "scores well under
-   `token-f1`" — but a reviewer should weigh whether that is enough separation.
-   The repository has no cheap out-of-pilot corpus to break it properly.
+   view, and stating the rules as string properties did not decouple them.**
+   [#222](https://github.com/uknoAI/kno/pull/222) discloses the first half:
+   splitting on `[A-Za-z0-9]` runs rather than the SQuAD convention preserves
+   `vt-stg-database`'s internal structure. Round four then claimed separation on
+   the grounds that its checks were properties of the expected strings rather
+   than "scores well under `token-f1`". **That separation was cosmetic** — the
+   rules had simply never been run, and running them broke them.
+
+   §2c-ter's claim to separation is different in kind and should be judged on
+   its own: it is an **identity** (`F1 == fieldsCorrect/fieldsTotal`) that either
+   holds or does not, checkable by hand, and the table in that section is the
+   check. It is still an identity about *this* tokenizer, so a different graded
+   Goal would need its own. The repository has no out-of-pilot corpus to test the
+   constraint's generality, and that remains unresolved.
 
 3. **The graded Goal changes what a delta in this scenario means, and the docs
    have not caught up.** *What the numbers mean* describes deltas over a binary
