@@ -675,7 +675,94 @@ The next test is unchanged in cost and now carries two questions: re-author
 closes (condition 5) and whether conformance stays at 1.00 when a field's
 mapping is unguessable (condition 6). ~$0.07.
 
-**Still not authorizing authoring.**
+**That test has run — §2c-terdecies.** Both questions came back yes, and the
+plan now carries a recommended disposition for the first time.
+
+### 2c-terdecies. The window re-author ran. Condition 5 holds
+
+Cost: **$0.08**, 181 calls. Total across both pilots: **$0.15**.
+
+**One variable changed.** `window`'s vocabulary went from `slow`/`mid`/`fast`/
+`rush` — ordered the same way as the plans `free`/`standard`/`business`/
+`enterprise` it keys on — to `quill`/`tarn`/`moss`/`flint`, which carry no
+speed or rank sense. Everything else is byte-identical: same seed, same 35
+(hours, category, plan) combinations, **same expected action and queue values on
+all 35 Cases**, same Asset text for `action-rule` and `queue-rule`, same prompt
+shape, same model. `action` was deliberately left ordinal as a within-experiment
+control.
+
+All four offline checks passed again and the identity held over 2240 pairs.
+
+**The leak closed, and only where predicted:**
+
+| window accuracy under an Asset that does not teach window | pilot 4 | pilot 5 |
+|---|---|---|
+| under `action-rule` | **0.62** | **0.04** |
+| under `queue-rule` | **0.62** | **0.17** |
+| window's own baseline | 0.28 | 0.21 |
+
+In pilot 4 window sat at 0.62 under both — more than double its baseline —
+without either Asset saying anything about windows. In pilot 5 it sits at or
+below baseline. **The deltas follow:**
+
+| Asset | pilot 4 | pilot 5 | coverage predicts | in CI? |
+|---|---|---|---|---|
+| `action-rule` | +0.5641 | **+0.2222** | 0.230 | ✓ |
+| `queue-rule` | +0.2564 | **+0.3111** | 0.253 | ✓ |
+| `window-rule` | +0.4359 | **+0.3778** | 0.263 | ✓ |
+| `all-three-rules` | +0.7436 | **+0.7556** | 0.747 | ✓ |
+
+**All four now contain their coverage prediction. In pilot 4, two did not.**
+Additivity improved with them: the three singles sum to 0.911 against an
+all-three of 0.756 (ratio 1.21), where pilot 4 was 1.256 against 0.744 (1.69).
+
+**The sharpest number is `action-rule`'s.** It fell from +0.5641 to +0.2222
+while its Asset text, its expected values and its own baseline field were
+untouched. Nothing about `action` changed. Its inflated pilot-4 delta was
+**window leaking into it**, and re-authoring a different field removed it.
+
+**Baseline moved the way the mechanism says it should:** 0.310 → 0.253, which is
+chance for three independent four-way choices. Under the ordered vocabulary the
+model was guessing windows above chance; under the arbitrary one it is not.
+
+**Condition 6 also held under the harder vocabulary: 121 of 121 conformed.** An
+unguessable field does not push the model out of format. That was the second
+open question and it is answered.
+
+### 2c-quaterdecies. What this settles, and what it does not
+
+**Settled.** Conditions 1–4 are checkable offline and the identity holds.
+Condition 5 is confirmed by a controlled single-variable experiment. Condition 6
+held across both pilots at 286 of 286 responses. A graded scenario in this shape
+is authorable, its baseline sits at chance rather than at 0 or 1, and
+`all-three-rules` clears the corrected ~0.40 bar at +0.7556.
+
+**Not settled, and this is the one to keep.** *Coverage is now consistent with
+the deltas; it is not demonstrated by them.* Round 6's second mechanism is
+untouched by any of this: **a field the model already answers correctly at
+baseline is correct in both arms**, so roughly a quarter of every treatment
+score here is credit the Asset did not supply. Coverage predictions were
+computed *from* the observed baseline, so agreeing with them is a consistency
+check, not an attribution. Both pilots leave that unaddressed, and no re-author
+can address it — it needs a different measurement, not a different format.
+
+Residual cross-field movement also remains, smaller and no longer one-directional
+(`queue` 0.24 → 0.48 under `window-rule`; `action` 0.31 → 0.13 under it). At
+n=13 pairs that may be noise. It is not claimed as anything.
+
+**Standing count: seven rounds, and round 5's identity plus conditions 5 and 6
+are what survived.** They survived as a narrower thing than each was proposed
+as: `token-f1` measures fraction-of-fields-correct, the format rules make that
+measurement well-defined, and none of it makes a delta an attribution.
+
+**Recommended disposition — the first time this plan has one.** The blocking
+questions about the *format* are answered and the remaining question is about
+*attribution*, which is a different plan. Authoring can be authorized for a
+scenario that: applies checks 1–6, reports its conformance rate beside every
+delta, and states in its README that a graded delta is fraction-of-fields
+gained and **not** the share of the Case the Asset supplied. Without that last
+sentence the scenario would overstate its own result, which is the failure this
+plan has spent seven rounds not committing.
 
 ### 3. Both Kinds, because the bridge needs behavior Assets
 
