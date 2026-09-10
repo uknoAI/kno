@@ -172,6 +172,27 @@ covenants — breaking any of them requires a major version.
 
 ### Fixed
 
+- **A reported delta interval could claim a value the metric cannot take.** On a
+  binary score, a paired difference lies in `[-1, +1]` by construction — every
+  pair contributes −1, 0 or +1. `adjustedWald` is a Wald-*type* interval, a
+  normal approximation around an adjusted point estimate, and normal
+  approximations run off the end of a bounded parameter space at extreme
+  observed rates. That is the textbook failure which retired the naive Wald
+  interval for a single proportion; this is its paired analogue.
+
+  It was systematic rather than a small-sample curiosity: with every pair
+  improving, the upper bound read **1.2327 at n=5 and was still 1.0362 at
+  n=50**. Nothing downstream caught it — `build` refuses NaN, Inf and a
+  non-positive half-width but knows no domain; `portfolio.Correct` widens the
+  half for Bonferroni and pushes an out-of-range bound *further* out; Select's
+  rules only ask whether an interval crosses zero. So the decision was
+  unaffected and the number was impossible.
+
+  The interval is now confined to its estimand's range. Clamping cannot lose
+  real coverage, because no true value lived in the discarded part.
+
+### Fixed
+
 - **A changelog fold could file entries under a release that predates them, and
   did so three times.** `scripts/fold-changelog.sh` compares the tree against
   the tag before renaming `## [Unreleased]` — but only once, when it opens the
