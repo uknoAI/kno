@@ -28,6 +28,19 @@ covenants — breaking any of them requires a major version.
      At release time the hand-written heading is renamed from [Unreleased] to
      the version. See docs/debt.md#76 for why that is still a manual step. -->
 
+## [0.2.3](https://github.com/uknoAI/kno/compare/v0.2.2...v0.2.3) (2026-09-10)
+
+
+### Features
+
+* **goal:** add token-f1, a self-contained graded Goal ([#222](https://github.com/uknoAI/kno/issues/222)) ([c9b39b1](https://github.com/uknoAI/kno/commit/c9b39b13f7c96001c5f29d2b29d9a1c4a55b3e46))
+
+
+### Bug Fixes
+
+* **stats:** an adjusted-Wald interval stays inside its estimand's range ([#220](https://github.com/uknoAI/kno/issues/220)) ([f0217da](https://github.com/uknoAI/kno/commit/f0217daf35faadd8983cb9b7705b7ccbad5efbfe))
+* **stats:** clamp every bounded-domain interval, not just the Wald branch ([#223](https://github.com/uknoAI/kno/issues/223)) ([4cc3b05](https://github.com/uknoAI/kno/commit/4cc3b05dcee7cc3915b07ba50ff236366fcb2a76))
+
 ## [Unreleased]
 
 ### Features
