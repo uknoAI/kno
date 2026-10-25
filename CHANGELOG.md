@@ -184,6 +184,8 @@ covenants — breaking any of them requires a major version.
 
 ## [Unreleased]
 
+## v0.2.2 — in detail
+
 ### Fixed
 
 - **A reported delta interval could claim a value the metric cannot take.** On a
